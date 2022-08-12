@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-redis/redis_rate/v9"
 
-	"github.com/vmihailenco/taskq/v3"
-	"github.com/vmihailenco/taskq/v3/memqueue"
+	"github.com/binguo-casa/taskqv3/v3"
+	"github.com/binguo-casa/taskqv3/v3/memqueue"
 )
 
 func timeSince(start time.Time) time.Duration {

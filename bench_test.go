@@ -5,9 +5,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/vmihailenco/taskq/v3"
-	"github.com/vmihailenco/taskq/v3/memqueue"
-	"github.com/vmihailenco/taskq/v3/redisq"
+	"github.com/binguo-casa/taskqv3/v3"
+	"github.com/binguo-casa/taskqv3/v3/memqueue"
+	"github.com/binguo-casa/taskqv3/v3/redisq"
 )
 
 func BenchmarkConsumerMemq(b *testing.B) {

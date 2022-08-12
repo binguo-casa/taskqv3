@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vmihailenco/taskq/v3"
+	"github.com/binguo-casa/taskqv3/v3"
 )
 
 type BatcherOptions struct {

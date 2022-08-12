@@ -1,13 +1,13 @@
 package taskqotel
 
 import (
-	"github.com/vmihailenco/taskq/v3"
+	"github.com/binguo-casa/taskqv3/v3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("github.com/vmihailenco/taskq")
+var tracer = otel.Tracer("github.com/binguo-casa/taskqv3")
 
 type OpenTelemetryHook struct{}
 

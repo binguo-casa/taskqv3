@@ -16,8 +16,8 @@ import (
 	. "github.com/onsi/gomega"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/vmihailenco/taskq/v3"
-	"github.com/vmihailenco/taskq/v3/memqueue"
+	"github.com/binguo-casa/taskqv3/v3"
+	"github.com/binguo-casa/taskqv3/v3/memqueue"
 )
 
 func TestMemqueue(t *testing.T) {

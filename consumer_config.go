@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/vmihailenco/taskq/v3/internal"
+	"github.com/binguo-casa/taskqv3/v3/internal"
 )
 
 const numSelectedThreshold = 20

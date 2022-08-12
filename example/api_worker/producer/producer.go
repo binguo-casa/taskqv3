@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/vmihailenco/taskq/example/api_worker"
+	"github.com/binguo-casa/taskqv3/example/api_worker"
 )
 
 func main() {

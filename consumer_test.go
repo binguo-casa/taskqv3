@@ -16,7 +16,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/go-redis/redis_rate/v9"
 
-	"github.com/vmihailenco/taskq/v3"
+	"github.com/binguo-casa/taskqv3/v3"
 )
 
 const waitTimeout = time.Second

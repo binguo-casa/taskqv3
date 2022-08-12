@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/hashicorp/golang-lru/simplelru"
-	"github.com/vmihailenco/taskq/v3/internal"
+	"github.com/binguo-casa/taskqv3/v3/internal"
 )
 
 func init() {
