@@ -20,7 +20,7 @@ import (
 	"github.com/vmihailenco/taskq/v3/internal/msgutil"
 )
 
-type RedisStreamClient interface {
+type redisStreamClient interface {
 	Del(ctx context.Context, keys ...string) *redis.IntCmd
 	TxPipeline() redis.Pipeliner
 
