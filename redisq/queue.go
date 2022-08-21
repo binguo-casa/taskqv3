@@ -40,6 +40,13 @@ type RedisStreamClient interface {
 	ZRem(ctx context.Context, key string, members ...interface{}) *redis.IntCmd
 }
 
+type RedisScriptClient interface {
+	Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd
+	EvalSha(ctx context.Context, sha1 string, keys []string, args ...interface{}) *redis.Cmd
+	ScriptExists(ctx context.Context, hashes ...string) *redis.BoolSliceCmd
+	ScriptLoad(ctx context.Context, script string) *redis.StringCmd
+}
+
 type Queue struct {
 	opt *taskq.QueueOptions
 
@@ -53,6 +60,9 @@ type Queue struct {
 	streamGroup         string
 	streamConsumer      string
 	schedulerLockPrefix string
+
+	redisScript   RedisScriptClient
+	delayedScript *redis.Script
 
 	_closed uint32
 }
@@ -73,11 +83,16 @@ func NewQueue(opt *taskq.QueueOptions) *Queue {
 	if !ok {
 		panic(fmt.Errorf("redisq: Redis client must support streams"))
 	}
+	redisScript, ok := opt.Redis.(RedisScriptClient)
+	if !ok {
+		panic(fmt.Errorf("redisq: Redis client must support scripts"))
+	}
 
 	q := &Queue{
 		opt: opt,
 
-		redis: red,
+		redis:       red,
+		redisScript: redisScript,
 
 		zset:                redisPrefix + "{" + opt.Name + "}:zset",
 		stream:              redisPrefix + "{" + opt.Name + "}:stream",
@@ -89,7 +104,11 @@ func NewQueue(opt *taskq.QueueOptions) *Queue {
 	q.wg.Add(1)
 	go func() {
 		defer q.wg.Done()
-		q.scheduler("delayed", q.scheduleDelayed)
+		if q.redisScript != nil && *q.opt.SchedulerDelayedUseScript {
+			q.schedulerNoLock("delayed", q.scheduleDelayedScript)
+		} else {
+			q.scheduler("delayed", q.scheduleDelayed)
+		}
 	}()
 
 	q.wg.Add(1)
@@ -292,6 +311,24 @@ func (q *Queue) scheduler(name string, fn func(ctx context.Context) (int, error)
 	}
 }
 
+func (q *Queue) schedulerNoLock(name string, fn func(ctx context.Context) (int, error)) {
+	for {
+		if q.closed() {
+			break
+		}
+
+		ctx := context.TODO()
+
+		n, err := fn(ctx)
+		if err != nil {
+			internal.Logger.Printf("redisq: %s failed: %s", name, err)
+		}
+		if err != nil || n == 0 {
+			time.Sleep(q.schedulerBackoff())
+		}
+	}
+}
+
 func (q *Queue) schedulerBackoff() time.Duration {
 	n := rand.Intn(q.opt.SchedulerBackoffRand)
 	if q.opt.SchedulerBackoffTime > 0 {
@@ -328,6 +365,46 @@ func (q *Queue) scheduleDelayed(ctx context.Context) (int, error) {
 	}
 
 	return len(bodies), nil
+}
+
+func (q *Queue) scheduleDelayedScript(ctx context.Context) (int, error) {
+	if q.delayedScript == nil {
+		q.delayedScript = redis.NewScript(`
+			local zkey = KEYS[1] -- zset key
+			local xkey = KEYS[2] -- stream key
+			local zmin = ARGV[1] -- ZRANGEBYSCORE min
+			local zmax = ARGV[2] -- ZRANGEBYSCORE max
+			local zcnt = ARGV[3] -- ZRANGEBYSCORE LIMIT count
+			-- ZRANGEBYSCORE with min-max and cnt
+			local zret = redis.pcall('ZRANGEBYSCORE', zkey, zmin, zmax, 'LIMIT', 0, zcnt)
+			if zret['err'] or #zret == 0 then return zret end
+			-- XADD each as field body
+			local i, v
+			for i, v in ipairs(zret) do
+				local xret = redis.pcall('XADD', xkey, '*', 'body', v)
+				if xret['err'] then return xret end
+			end
+			-- ZREM all zret
+			return redis.pcall('ZREM', zkey, unpack(zret))
+		`)
+	}
+
+	min := "-inf"
+	tm := time.Now()
+	max := strconv.FormatInt(unixMs(tm), 10)
+
+	val, err := q.delayedScript.Run(
+		ctx, q.redisScript,
+		[]string{q.zset, q.stream},         // KEYS[1],KEYS[2]
+		min, max, q.opt.SchedulerBatchSize, // ARGV[1],ARGV[2],ARGV[3]
+	).Result()
+
+	if err != nil {
+		return 0, err
+	}
+	n, _ := val.(int)
+
+	return n, err
 }
 
 func (q *Queue) schedulePending(ctx context.Context) (int, error) {

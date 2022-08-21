@@ -11,11 +11,14 @@ import (
 )
 
 func BenchmarkConsumerMemq(b *testing.B) {
-	benchmarkConsumer(b, memqueue.NewFactory())
+	benchmarkConsumer(b, memqueue.NewFactory(), false)
 }
 
-func BenchmarkConsumerRedisq(b *testing.B) {
-	benchmarkConsumer(b, redisq.NewFactory())
+func BenchmarkConsumerRedisqScript(b *testing.B) {
+	benchmarkConsumer(b, redisq.NewFactory(), true)
+}
+func BenchmarkConsumerRedisqNoScript(b *testing.B) {
+	benchmarkConsumer(b, redisq.NewFactory(), false)
 }
 
 var (
@@ -25,13 +28,14 @@ var (
 	wg   sync.WaitGroup
 )
 
-func benchmarkConsumer(b *testing.B, factory taskq.Factory) {
+func benchmarkConsumer(b *testing.B, factory taskq.Factory, script bool) {
 	c := context.Background()
 
 	once.Do(func() {
 		q = factory.RegisterQueue(&taskq.QueueOptions{
-			Name:  "bench",
-			Redis: redisRing(),
+			Name:                      "bench",
+			Redis:                     redisRing(),
+			SchedulerDelayedUseScript: &script,
 		})
 
 		task = taskq.RegisterTask(&taskq.TaskOptions{

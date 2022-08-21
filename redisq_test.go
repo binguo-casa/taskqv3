@@ -29,9 +29,19 @@ func TestRedisqFallback(t *testing.T) {
 	})
 }
 
-func TestRedisqDelay(t *testing.T) {
+func TestRedisqDelayScript(t *testing.T) {
+	v := true
 	testDelay(t, redisqFactory(), &taskq.QueueOptions{
-		Name: queueName("redisq-delay"),
+		Name:                      queueName("redisq-delay-script"),
+		SchedulerDelayedUseScript: &v,
+	})
+}
+
+func TestRedisqDelayNoScript(t *testing.T) {
+	v := false
+	testDelay(t, redisqFactory(), &taskq.QueueOptions{
+		Name:                      queueName("redisq-delay-noscript"),
+		SchedulerDelayedUseScript: &v,
 	})
 }
 

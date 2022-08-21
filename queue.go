@@ -73,6 +73,8 @@ type QueueOptions struct {
 	SchedulerBackoffRand int
 	// Batch to process tasks, default 100
 	SchedulerBatchSize int64
+	// Use Redis scrips for delayed scheduling, default true
+	SchedulerDelayedUseScript *bool
 }
 
 func (opt *QueueOptions) Init() {
@@ -142,6 +144,11 @@ func (opt *QueueOptions) Init() {
 
 	if opt.SchedulerBatchSize <= 0 {
 		opt.SchedulerBatchSize = 100
+	}
+
+	if opt.SchedulerDelayedUseScript == nil {
+		v := true
+		opt.SchedulerDelayedUseScript = &v
 	}
 }
 
