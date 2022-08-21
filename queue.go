@@ -67,6 +67,12 @@ type QueueOptions struct {
 	// We can change it to a bigger value so that it won't slowdown the redis when using redis queue.
 	// It will be between SchedulerBackoffTime and SchedulerBackoffTime+250ms.
 	SchedulerBackoffTime time.Duration
+	// Backoff base in Millisecond, default 1000
+	SchedulerBackoffBase int
+	// Backoff rand in Millisecond, default 500
+	SchedulerBackoffRand int
+	// Batch to process tasks, default 100
+	SchedulerBatchSize int64
 }
 
 func (opt *QueueOptions) Init() {
@@ -124,6 +130,18 @@ func (opt *QueueOptions) Init() {
 
 	if opt.Handler == nil {
 		opt.Handler = &Tasks
+	}
+
+	if opt.SchedulerBackoffBase <= 0 {
+		opt.SchedulerBackoffBase = 1000
+	}
+
+	if opt.SchedulerBackoffRand <= 0 {
+		opt.SchedulerBackoffRand = 500
+	}
+
+	if opt.SchedulerBatchSize <= 0 {
+		opt.SchedulerBatchSize = 100
 	}
 }
 

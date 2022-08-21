@@ -20,9 +20,7 @@ import (
 	"github.com/vmihailenco/taskq/v3/internal/msgutil"
 )
 
-const batchSize = 100
-
-type redisStreamClient interface {
+type RedisStreamClient interface {
 	Del(ctx context.Context, keys ...string) *redis.IntCmd
 	TxPipeline() redis.Pipeliner
 
@@ -295,11 +293,11 @@ func (q *Queue) scheduler(name string, fn func(ctx context.Context) (int, error)
 }
 
 func (q *Queue) schedulerBackoff() time.Duration {
-	n := rand.Intn(500)
+	n := rand.Intn(q.opt.SchedulerBackoffRand)
 	if q.opt.SchedulerBackoffTime > 0 {
 		return q.opt.SchedulerBackoffTime + time.Duration(n)*time.Millisecond
 	}
-	return time.Duration(n+1000) * time.Millisecond
+	return time.Duration(n+q.opt.SchedulerBackoffBase) * time.Millisecond
 }
 
 func (q *Queue) scheduleDelayed(ctx context.Context) (int, error) {
@@ -308,7 +306,7 @@ func (q *Queue) scheduleDelayed(ctx context.Context) (int, error) {
 	bodies, err := q.redis.ZRangeByScore(ctx, q.zset, &redis.ZRangeBy{
 		Min:   "-inf",
 		Max:   max,
-		Count: batchSize,
+		Count: q.opt.SchedulerBatchSize,
 	}).Result()
 	if err != nil {
 		return 0, err
@@ -341,7 +339,7 @@ func (q *Queue) schedulePending(ctx context.Context) (int, error) {
 		Group:  q.streamGroup,
 		Start:  start,
 		End:    "+",
-		Count:  batchSize,
+		Count:  q.opt.SchedulerBatchSize,
 	}).Result()
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "NOGROUP") {
